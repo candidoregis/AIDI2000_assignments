@@ -2,6 +2,7 @@
 
 # Import necessary libraries
 import os
+import time
 import pandas as pd
 import numpy as np
 import seaborn as sns
@@ -155,9 +156,8 @@ print("\nLogistic Regression Model Evaluation:")
 log_accuracy = accuracy_score(y_test, y_pred_log)
 print(f"Accuracy: {log_accuracy:.4f}")
 
-# Display classification report
-print("\nClassification Report:")
-print(classification_report(y_test, y_pred_log, target_names=medal_encoder.classes_))
+# Generate Logistic Regression classification report
+log_report = classification_report(y_test, y_pred_log, target_names=medal_encoder.classes_)
 
 # EDA Visualization 06 - Logistic Regression Confusion Matrix
 plt.figure(figsize=(10, 6))
@@ -185,9 +185,8 @@ print("\nDecision Tree Model Evaluation:")
 dec_accuracy = accuracy_score(y_test, y_pred_dectree)
 print(f"Accuracy: {dec_accuracy:.4f}")
 
-# Display classification report
-print("\nClassification Report:")
-print(classification_report(y_test, y_pred_dectree, target_names=medal_encoder.classes_))
+# Generate Decision Tree classification report
+dec_report = classification_report(y_test, y_pred_dectree, target_names=medal_encoder.classes_)  
 
 # EDA Visualization 07 - Logistic Regression Confusion Matrix
 plt.figure(figsize=(10, 6))
@@ -216,7 +215,9 @@ X_train, X_test, y_train_cat, y_test_cat = train_test_split(X_normalized, y_cate
 # Build the neural network model
 print("\nBuilding neural network model...")
 model = Sequential([
-    Dense(64, activation='relu', input_shape=(X_train.shape[1],)),
+    Dense(16, activation='relu', input_shape=(X_train.shape[1],)),
+    Dense(32, activation='relu'),
+    Dense(16, activation='relu'),
     Dense(y_categorical.shape[1], activation='softmax')
 ])
 
@@ -227,15 +228,18 @@ model.compile(optimizer='adam',
 
 # Train the model with validation split
 print("\nTraining the neural network...")
+start_time = time.time()
 history = model.fit(
     X_train, y_train_cat,
     epochs=50,
     batch_size=32,
-    validation_split=0.2
+    validation_split=0.2,
+    verbose=0
 )
+training_time = time.time() - start_time
 
 # EDA Visualization 08 - Neural Network Training - Validation Accuracy & Loss
-plt.figure(figsize=(10, 6))
+""" plt.figure(figsize=(10, 6))
 # Plot accuracy
 plt.subplot(1, 2, 1)
 plt.plot(history.history['accuracy'], label='Training Accuracy')
@@ -254,29 +258,18 @@ plt.xlabel('Epoch', fontsize=14)
 plt.legend()
 plt.tight_layout()
 plt.savefig('visualizations/08-neural_network_training_history.png')
-plt.close()
+plt.close() """
 
 # Evaluate the model on the test set
 print("\nEvaluating neural network on test set...")
-nnt_loss, nnt_accuracy = model.evaluate(X_test, y_test_cat)
+nnt_loss, nnt_accuracy = model.evaluate(X_test, y_test_cat, verbose=0)
 print(f"Test accuracy: {nnt_accuracy:.4f}")
 
-# ----------------------------------------------------- #
-
-# Compare with previous models
-print("\n--- Model Comparison (All Models) ---")
-print(f"Logistic Regression Accuracy: {log_accuracy:.4f}")
-print(f"Decision Tree Accuracy: {dec_accuracy:.4f}")
-print(f"Neural Network Accuracy: {nnt_accuracy:.4f}")
-
-# Determine the best model among all three
-accuracies = {
-    "Logistic Regression": log_accuracy,
-    "Decision Tree": dec_accuracy,
-    "Neural Network": nnt_accuracy
-}
-best_model = max(accuracies, key=accuracies.get)
-print(f"\nThe best performing model is: {best_model} with accuracy {accuracies[best_model]:.4f}")
+# Generate Neural Network classification report
+y_pred_probs = model.predict(X_test, verbose=0)
+y_pred = np.argmax(y_pred_probs, axis=1)
+y_true = np.argmax(y_test_cat, axis=1)
+nn_report = classification_report(y_true, y_pred, target_names=medal_encoder.classes_)
 
 # ----------------------------------------------------- #
 
@@ -304,7 +297,9 @@ enhanced_X_train, enhanced_X_test, enhanced_y_train_cat, enhanced_y_test_cat = t
 # Build the neural network model
 print("\nBuilding neural network model...")
 enhanced_model = Sequential([
-    Dense(64, activation='relu', input_shape=(enhanced_X_train.shape[1],)),
+    Dense(16, activation='relu', input_shape=(enhanced_X_train.shape[1],)),
+    Dense(32, activation='relu'),
+    Dense(16, activation='relu'),
     Dense(y_categorical.shape[1], activation='softmax')
 ])
 
@@ -315,15 +310,18 @@ enhanced_model.compile(optimizer='adam',
 
 # Train the model with validation split
 print("\nTraining the neural network...")
+start_time_enhanced = time.time()
 enhanced_history = enhanced_model.fit(
     enhanced_X_train, enhanced_y_train_cat,
     epochs=50,
     batch_size=32,
-    validation_split=0.2
+    validation_split=0.2,
+    verbose=0
 )
+training_time_enhanced = time.time() - start_time_enhanced
 
 # EDA Visualization 09 - Neural Network Training - Validation Accuracy & Loss Enhanced Set
-plt.figure(figsize=(10, 6))
+""" plt.figure(figsize=(10, 6))
 # Plot accuracy
 plt.subplot(1, 2, 1)
 plt.plot(enhanced_history.history['accuracy'], label='Training Accuracy')
@@ -342,11 +340,65 @@ plt.xlabel('Epoch', fontsize=14)
 plt.legend()
 plt.tight_layout()
 plt.savefig('visualizations/09-neural_network_enhanced_set_training_history.png')
-plt.close()
+plt.close() """
 
 # Evaluate the model on the test set
 print("\nEvaluating neural network on enhanced test set...")
-enhanced_nnt_loss, enhanced_nnt_accuracy = enhanced_model.evaluate(enhanced_X_test, enhanced_y_test_cat)
+enhanced_nnt_loss, enhanced_nnt_accuracy = enhanced_model.evaluate(enhanced_X_test, enhanced_y_test_cat, verbose=0)
 print(f"Test accuracy (enhanced set): {enhanced_nnt_accuracy:.4f}")
 
+# Generate classification report
+enhanced_y_pred_probs = enhanced_model.predict(enhanced_X_test, verbose=0)
+enhanced_y_pred = np.argmax(enhanced_y_pred_probs, axis=1)
+enhanced_y_true = np.argmax(enhanced_y_test_cat, axis=1)
+#print(classification_report(enhanced_y_test_cat, enhanced_y_pred, target_names=['Bronze', 'Silver', 'Gold']))
+enhanced_nn_report = classification_report(enhanced_y_true, enhanced_y_pred, target_names=medal_encoder.classes_)
+
 # ----------------------------------------------------- #
+
+# Compare with previous models
+print("\n--- Model Comparison (All Models) ---")
+print(f"Logistic Regression Accuracy: {log_accuracy:.4f}")
+print(f"Decision Tree Accuracy: {dec_accuracy:.4f}")
+print(f"Neural Network Accuracy: {nnt_accuracy:.4f}")
+print(f"Enhanced Neural Network Accuracy: {enhanced_nnt_accuracy:.4f}")
+
+# Determine the best model among all three
+accuracies = {
+    "Logistic Regression": log_accuracy,
+    "Decision Tree": dec_accuracy,
+    "Neural Network": nnt_accuracy,
+    "Enhanced Neural Network": enhanced_nnt_accuracy
+}
+best_model = max(accuracies, key=accuracies.get)
+print(f"\nThe best performing model is: {best_model} with accuracy {accuracies[best_model]:.4f}")
+
+# Print classification reports for all models
+print("\n--- Classification Reports ---")
+print("\nLogistic Regression Classification Report:")
+print(log_report)
+print("\nDecision Tree Classification Report:")
+print(dec_report)
+print("\nNeural Network Classification Report:")
+print(nn_report)
+print("\nEnhanced Neural Network Classification Report:")
+print(enhanced_nn_report)   
+
+# ----------------------------------------------------- #
+
+# Reflection on domain-driven features
+print("\n--- Summary Reflection ---")
+print("\n1. Did accuracy improve?")
+if enhanced_nnt_accuracy > nnt_accuracy:
+    print(f"   Yes, accuracy improved by {enhanced_nnt_accuracy - nnt_accuracy:.4f} ({(enhanced_nnt_accuracy - nnt_accuracy) / nnt_accuracy * 100:.2f}%)")
+else:
+    print(f"   No, accuracy decreased by {nnt_accuracy - enhanced_nnt_accuracy:.4f} ({(nnt_accuracy - enhanced_nnt_accuracy) / nnt_accuracy * 100:.2f}%)")
+
+print("\n2. Did the model train faster/slower?")
+if training_time_enhanced < training_time:
+    print(f"   The new model was faster by {training_time - training_time_enhanced:.2f} seconds ({(training_time - training_time_enhanced) / training_time * 100:.2f}%)")
+else:
+    print(f"   The new model was slower by {training_time_enhanced - training_time:.2f} seconds ({(training_time_enhanced - training_time) / training_time * 100:.2f}%)")
+
+print("\n3. Which feature seemed more predictive?")
+
