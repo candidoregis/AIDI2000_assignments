@@ -261,6 +261,8 @@ print("\nEvaluating neural network on test set...")
 nnt_loss, nnt_accuracy = model.evaluate(X_test, y_test_cat)
 print(f"Test accuracy: {nnt_accuracy:.4f}")
 
+# ----------------------------------------------------- #
+
 # Compare with previous models
 print("\n--- Model Comparison (All Models) ---")
 print(f"Logistic Regression Accuracy: {log_accuracy:.4f}")
@@ -275,5 +277,76 @@ accuracies = {
 }
 best_model = max(accuracies, key=accuracies.get)
 print(f"\nThe best performing model is: {best_model} with accuracy {accuracies[best_model]:.4f}")
+
+# ----------------------------------------------------- #
+
+# Copying the original features after encoding for enhanced feature engineering
+enhanced_data_features = data_features.copy()
+
+# Feature 1: 'country_medal_count' - Total medals won by each country
+country_medal_counts = data.groupby('Country').size()
+enhanced_data_features['country_medal_count'] = enhanced_data_features['Country'].map(country_medal_counts)
+
+# Feature 2: 'sport_popularity' - Total medals awarded in each sport
+sport_popularity = data.groupby('Sport').size()
+enhanced_data_features['sport_popularity'] = enhanced_data_features['Sport'].map(sport_popularity)
+
+# Select features
+enhanced_X = enhanced_data_features.select_dtypes(include=['int64', 'float64'])
+
+# Normalize numerical features
+scaler = MinMaxScaler()
+enhanced_X_normalized = scaler.fit_transform(enhanced_X)
+
+# Split the data into training and validation sets
+enhanced_X_train, enhanced_X_test, enhanced_y_train_cat, enhanced_y_test_cat = train_test_split(enhanced_X_normalized, y_categorical, test_size=0.2, random_state=42)
+
+# Build the neural network model
+print("\nBuilding neural network model...")
+enhanced_model = Sequential([
+    Dense(64, activation='relu', input_shape=(enhanced_X_train.shape[1],)),
+    Dense(y_categorical.shape[1], activation='softmax')
+])
+
+# Compile the model
+enhanced_model.compile(optimizer='adam',
+              loss='categorical_crossentropy',
+              metrics=['accuracy'])
+
+# Train the model with validation split
+print("\nTraining the neural network...")
+enhanced_history = enhanced_model.fit(
+    enhanced_X_train, enhanced_y_train_cat,
+    epochs=50,
+    batch_size=32,
+    validation_split=0.2
+)
+
+# EDA Visualization 09 - Neural Network Training - Validation Accuracy & Loss Enhanced Set
+plt.figure(figsize=(10, 6))
+# Plot accuracy
+plt.subplot(1, 2, 1)
+plt.plot(enhanced_history.history['accuracy'], label='Training Accuracy')
+plt.plot(enhanced_history.history['val_accuracy'], label='Validation Accuracy')
+plt.title('Model Accuracy', fontsize=16)
+plt.ylabel('Accuracy', fontsize=14)
+plt.xlabel('Epoch', fontsize=14)
+plt.legend()
+# Plot loss
+plt.subplot(1, 2, 2)
+plt.plot(enhanced_history.history['loss'], label='Training Loss')
+plt.plot(enhanced_history.history['val_loss'], label='Validation Loss')
+plt.title('Model Loss', fontsize=16)
+plt.ylabel('Loss', fontsize=14)
+plt.xlabel('Epoch', fontsize=14)
+plt.legend()
+plt.tight_layout()
+plt.savefig('visualizations/09-neural_network_enhanced_set_training_history.png')
+plt.close()
+
+# Evaluate the model on the test set
+print("\nEvaluating neural network on enhanced test set...")
+enhanced_nnt_loss, enhanced_nnt_accuracy = enhanced_model.evaluate(enhanced_X_test, enhanced_y_test_cat)
+print(f"Test accuracy (enhanced set): {enhanced_nnt_accuracy:.4f}")
 
 # ----------------------------------------------------- #
