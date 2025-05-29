@@ -6,7 +6,17 @@ import pandas as pd
 import numpy as np
 import seaborn as sns
 from matplotlib import pyplot as plt
-from sklearn.preprocessing import LabelEncoder
+from sklearn.preprocessing import LabelEncoder, MinMaxScaler, StandardScaler
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+import tensorflow as tf  # Core deep learning framework
+from tensorflow import keras  # High-level API for building neural networks
+from tensorflow.keras import layers
+from tensorflow.keras.utils import to_categorical
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense
 
 # Load the dataset
 data = pd.read_excel('medals-dataset/Olympic-Medals.xlsx')
@@ -107,21 +117,163 @@ plt.savefig('visualizations/05-medal_count_by_year.png')
 plt.close() """
 
 # Create a copy of the dataframe for preprocessing
-data_encoded = data.copy()
+data_features = data.drop(columns=['Medal'])  # Features
+data_target = data[['Medal']]  # Target variable
 
-# Encode the target variable (Medal)
-label_encoder = LabelEncoder()
-data_encoded['Medal_Encoded'] = label_encoder.fit_transform(data_encoded['Medal'])
-print(f"Medal encoding mapping: {dict(zip(label_encoder.classes_, label_encoder.transform(label_encoder.classes_)))}")
+# Encode the 'Medal' column
+medal_encoder = LabelEncoder()
+data_target = medal_encoder.fit_transform(data_target['Medal'])
 
 # Encode other categorical variables
-#print("\nEncoding other categorical variables...")
+label_encoder = LabelEncoder()
 for col in categorical_cols:
-    if col != 'Medal':  # Medal is already encoded
-        data_encoded[f'{col}_Encoded'] = label_encoder.fit_transform(data_encoded[col])
-        print(f"Encoded {col} -> {col}_Encoded")
+    if col != 'Medal': 
+        data_features[f'{col}_Encoded'] = label_encoder.fit_transform(data_features[col])
 
-# One-hot encoding for categorical variables
-print("\nPerforming one-hot encoding for categorical variables...")
-df_onehot = pd.get_dummies(data, columns=[col for col in categorical_cols if col != 'Medal'])
-print(f"Shape after one-hot encoding: {df_onehot.shape}")
+# Select features and target variables
+X = data_features.select_dtypes(include=['int64', 'float64'])  # Select only numeric features
+y = data_target  # Use the encoded medal column as target
+
+# Standardize features
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+# Split the data into training and test sets (80/20)
+X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.2, random_state=42)
+
+# ----------------------------------------------------- #
+
+# Train Logistic Regression model
+log_reg = LogisticRegression(max_iter=1000, random_state=42)
+log_reg.fit(X_train, y_train)
+
+# Make predictions with Logistic Regression
+y_pred_log = log_reg.predict(X_test)
+
+# Evaluate Logistic Regression model
+print("\nLogistic Regression Model Evaluation:")
+log_accuracy = accuracy_score(y_test, y_pred_log)
+print(f"Accuracy: {log_accuracy:.4f}")
+
+# Display classification report
+print("\nClassification Report:")
+print(classification_report(y_test, y_pred_log, target_names=medal_encoder.classes_))
+
+# EDA Visualization 06 - Logistic Regression Confusion Matrix
+plt.figure(figsize=(10, 6))
+sns.heatmap(confusion_matrix(y_test, y_pred_log), annot=True, fmt='d', cmap='Blues',
+           xticklabels=medal_encoder.classes_, yticklabels=medal_encoder.classes_)
+plt.title('Confusion Matrix - Logistic Regression', fontsize=16)
+plt.ylabel('True Label', fontsize=14)
+plt.xlabel('Predicted Label', fontsize=14)
+plt.tight_layout()
+plt.savefig('visualizations/06-logistic_regression_confusion_matrix.png')
+plt.close()
+
+# ----------------------------------------------------- #
+
+# Train Decision Tree model
+print("\nTraining Decision Tree model...")
+decTree = DecisionTreeClassifier(random_state=42)
+decTree.fit(X_train, y_train)
+
+# Make predictions with Decision Tree
+y_pred_dectree = decTree.predict(X_test)
+
+# Evaluate Decision Tree model
+print("\nDecision Tree Model Evaluation:")
+dec_accuracy = accuracy_score(y_test, y_pred_dectree)
+print(f"Accuracy: {dec_accuracy:.4f}")
+
+# Display classification report
+print("\nClassification Report:")
+print(classification_report(y_test, y_pred_dectree, target_names=medal_encoder.classes_))
+
+# EDA Visualization 07 - Logistic Regression Confusion Matrix
+plt.figure(figsize=(10, 6))
+sns.heatmap(confusion_matrix(y_test, y_pred_dectree), annot=True, fmt='d', cmap='Blues',
+           xticklabels=medal_encoder.classes_, yticklabels=medal_encoder.classes_)
+plt.title('Confusion Matrix - Decision Tree', fontsize=16)
+plt.ylabel('True Label', fontsize=14)
+plt.xlabel('Predicted Label', fontsize=14)
+plt.tight_layout()
+plt.savefig('visualizations/07-decision_tree_confusion_matrix.png')
+plt.close()
+
+# ----------------------------------------------------- #
+
+# Normalize numerical features
+scaler = MinMaxScaler()
+X_normalized = scaler.fit_transform(X)
+
+# Convert target to categorical (one-hot encoding)
+y_categorical = to_categorical(y)
+print(f"Shape of categorical target: {y_categorical.shape}")
+
+# Split the data into training and validation sets
+X_train, X_test, y_train_cat, y_test_cat = train_test_split(X_normalized, y_categorical, test_size=0.2, random_state=42)
+
+# Build the neural network model
+print("\nBuilding neural network model...")
+model = Sequential([
+    Dense(64, activation='relu', input_shape=(X_train.shape[1],)),
+    Dense(y_categorical.shape[1], activation='softmax')
+])
+
+# Compile the model
+model.compile(optimizer='adam',
+              loss='categorical_crossentropy',
+              metrics=['accuracy'])
+
+# Train the model with validation split
+print("\nTraining the neural network...")
+history = model.fit(
+    X_train, y_train_cat,
+    epochs=50,
+    batch_size=32,
+    validation_split=0.2
+)
+
+# EDA Visualization 08 - Neural Network Training - Validation Accuracy & Loss
+plt.figure(figsize=(10, 6))
+# Plot accuracy
+plt.subplot(1, 2, 1)
+plt.plot(history.history['accuracy'], label='Training Accuracy')
+plt.plot(history.history['val_accuracy'], label='Validation Accuracy')
+plt.title('Model Accuracy', fontsize=16)
+plt.ylabel('Accuracy', fontsize=14)
+plt.xlabel('Epoch', fontsize=14)
+plt.legend()
+# Plot loss
+plt.subplot(1, 2, 2)
+plt.plot(history.history['loss'], label='Training Loss')
+plt.plot(history.history['val_loss'], label='Validation Loss')
+plt.title('Model Loss', fontsize=16)
+plt.ylabel('Loss', fontsize=14)
+plt.xlabel('Epoch', fontsize=14)
+plt.legend()
+plt.tight_layout()
+plt.savefig('visualizations/08-neural_network_training_history.png')
+plt.close()
+
+# Evaluate the model on the test set
+print("\nEvaluating neural network on test set...")
+nnt_loss, nnt_accuracy = model.evaluate(X_test, y_test_cat)
+print(f"Test accuracy: {nnt_accuracy:.4f}")
+
+# Compare with previous models
+print("\n--- Model Comparison (All Models) ---")
+print(f"Logistic Regression Accuracy: {log_accuracy:.4f}")
+print(f"Decision Tree Accuracy: {dec_accuracy:.4f}")
+print(f"Neural Network Accuracy: {nnt_accuracy:.4f}")
+
+# Determine the best model among all three
+accuracies = {
+    "Logistic Regression": log_accuracy,
+    "Decision Tree": dec_accuracy,
+    "Neural Network": nnt_accuracy
+}
+best_model = max(accuracies, key=accuracies.get)
+print(f"\nThe best performing model is: {best_model} with accuracy {accuracies[best_model]:.4f}")
+
+# ----------------------------------------------------- #
