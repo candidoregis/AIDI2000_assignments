@@ -12,12 +12,14 @@ from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
-import tensorflow as tf  # Core deep learning framework
-from tensorflow import keras  # High-level API for building neural networks
+import tensorflow as tf  
+from tensorflow import keras  
 from tensorflow.keras import layers
 from tensorflow.keras.utils import to_categorical
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense
+from sklearn.base import BaseEstimator, ClassifierMixin
+from sklearn.inspection import permutation_importance
 
 # Load the dataset
 data = pd.read_excel('medals-dataset/Olympic-Medals.xlsx')
@@ -207,7 +209,6 @@ X_normalized = scaler.fit_transform(X)
 
 # Convert target to categorical (one-hot encoding)
 y_categorical = to_categorical(y)
-print(f"Shape of categorical target: {y_categorical.shape}")
 
 # Split the data into training and validation sets
 X_train, X_test, y_train_cat, y_test_cat = train_test_split(X_normalized, y_categorical, test_size=0.2, random_state=42)
@@ -345,20 +346,104 @@ plt.close() """
 # Evaluate the model on the test set
 print("\nEvaluating neural network on enhanced test set...")
 enhanced_nnt_loss, enhanced_nnt_accuracy = enhanced_model.evaluate(enhanced_X_test, enhanced_y_test_cat, verbose=0)
-print(f"Test accuracy (enhanced set): {enhanced_nnt_accuracy:.4f}")
+print(f"\nTest accuracy (enhanced set): {enhanced_nnt_accuracy:.4f}")
 
 # Generate classification report
 enhanced_y_pred_probs = enhanced_model.predict(enhanced_X_test, verbose=0)
 enhanced_y_pred = np.argmax(enhanced_y_pred_probs, axis=1)
 enhanced_y_true = np.argmax(enhanced_y_test_cat, axis=1)
-#print(classification_report(enhanced_y_test_cat, enhanced_y_pred, target_names=['Bronze', 'Silver', 'Gold']))
 enhanced_nn_report = classification_report(enhanced_y_true, enhanced_y_pred, target_names=medal_encoder.classes_)
+
+# ----------------------------------------------------- #
+
+# Decision Tree Feature Importance
+feature_names = X.columns
+dec_importances = decTree.feature_importances_
+
+# Sort feature importances in descending order
+sorted_indices = np.argsort(dec_importances)[::-1]
+sorted_importances = dec_importances[sorted_indices]
+sorted_feature_names = feature_names[sorted_indices]
+
+# EDA Visualization 10 - Decision Tree Feature Importance
+plt.figure(figsize=(10, 6))
+plt.bar(range(len(sorted_importances)), sorted_importances, align='center')
+plt.xticks(range(len(sorted_importances)), sorted_feature_names, rotation=45, ha='right')
+plt.title('Features Importance List - Decision Tree', fontsize=16)
+plt.xlabel('Features', fontsize=14)
+plt.ylabel('Importance', fontsize=14)
+plt.tight_layout()
+plt.savefig('visualizations/10-decision_tree_feature_importance.png')
+plt.close()
+
+# ----------------------------------------------------- #
+
+# Create a wrapper class for the neural network to make it compatible with scikit-learn
+class NeuralNetworkWrapper(BaseEstimator, ClassifierMixin):
+    def __init__(self, model):
+        self.model = model
+        
+    def fit(self, X, y):
+        # Already fitted, just return self
+        return self
+    
+    def predict(self, X):
+        return np.argmax(self.model.predict(X), axis=1)
+
+# Create a wrapper for the neural network
+nn_wrapper = NeuralNetworkWrapper(model)
+
+# Calculate feature importance using permutation importance
+nn_perm_importance = permutation_importance(nn_wrapper, X_normalized, y, n_repeats=5, random_state=42)
+nn_importances = nn_perm_importance.importances_mean
+
+# Sort feature importances
+nn_sorted_idx = np.argsort(nn_importances)[::-1]
+nn_sorted_importances = nn_importances[nn_sorted_idx]
+nn_sorted_feature_names = np.array(feature_names)[nn_sorted_idx]
+
+# EDA Visualization 11 - Neural Network Feature Importance
+plt.figure(figsize=(10, 6))
+plt.bar(range(len(nn_sorted_importances)), nn_sorted_importances, align='center')
+plt.xticks(range(len(nn_sorted_importances)), nn_sorted_feature_names, rotation=45, ha='right')
+plt.title('Features Importance List - Neural Network', fontsize=16)
+plt.xlabel('Features', fontsize=14)
+plt.ylabel('Importance', fontsize=14)
+plt.tight_layout()
+plt.savefig('visualizations/11-neural_network_feature_importance.png')
+plt.close()
+
+# Enhanced Neural Network Features
+enhanced_feature_names = enhanced_X.columns
+
+# Create a wrapper for the enhanced neural network
+enhanced_nn_wrapper = NeuralNetworkWrapper(enhanced_model)
+
+# Calculate feature importance using permutation importance
+enhanced_perm_importance = permutation_importance(enhanced_nn_wrapper, enhanced_X_normalized, np.argmax(y_categorical, axis=1), n_repeats=3, random_state=42)
+enhanced_importances = enhanced_perm_importance.importances_mean
+
+# Sort feature importances
+enhanced_sorted_idx = np.argsort(enhanced_importances)[::-1]
+enhanced_sorted_importances = enhanced_importances[enhanced_sorted_idx]
+enhanced_sorted_feature_names = np.array(enhanced_feature_names)[enhanced_sorted_idx]
+
+# EDA Visualization 12 - Enhanced Neural Network Feature Importance
+plt.figure(figsize=(10, 6))
+plt.bar(range(len(enhanced_sorted_importances)), enhanced_sorted_importances, align='center')
+plt.xticks(range(len(enhanced_sorted_importances)), enhanced_sorted_feature_names, rotation=45, ha='right')
+plt.title('Features Importance List - Enhanced Neural Network', fontsize=16)
+plt.xlabel('Features', fontsize=14)
+plt.ylabel('Importance', fontsize=14)
+plt.tight_layout()
+plt.savefig('visualizations/12-enhanced_neural_network_feature_importance.png')
+plt.close()
 
 # ----------------------------------------------------- #
 
 # Compare with previous models
 print("\n--- Model Comparison (All Models) ---")
-print(f"Logistic Regression Accuracy: {log_accuracy:.4f}")
+print(f"\nLogistic Regression Accuracy: {log_accuracy:.4f}")
 print(f"Decision Tree Accuracy: {dec_accuracy:.4f}")
 print(f"Neural Network Accuracy: {nnt_accuracy:.4f}")
 print(f"Enhanced Neural Network Accuracy: {enhanced_nnt_accuracy:.4f}")
@@ -384,9 +469,29 @@ print(nn_report)
 print("\nEnhanced Neural Network Classification Report:")
 print(enhanced_nn_report)   
 
+# Create table headers
+print(f"{'Rank':<5}{'Decision Tree':<20}{'Importance':<13}{'Neural Network':<20}{'Importance':<13}{'Enhanced Neural Net':<20}{'Importance':<10}")
+print("-" * 101)
+
+# Determine how many features to display (Top 5)
+num_features = min(5, len(sorted_feature_names), len(nn_sorted_feature_names), len(enhanced_sorted_feature_names))
+
+# Print each row of the table
+for i in range(num_features):
+    dt_feature = sorted_feature_names[i] if i < len(sorted_feature_names) else "-"
+    dt_importance = f"{sorted_importances[i]:.4f}" if i < len(sorted_importances) else "-"
+    
+    nn_feature = nn_sorted_feature_names[i] if i < len(nn_sorted_feature_names) else "-"
+    nn_importance = f"{nn_sorted_importances[i]:.4f}" if i < len(nn_sorted_importances) else "-"
+    
+    enh_feature = enhanced_sorted_feature_names[i] if i < len(enhanced_sorted_feature_names) else "-"
+    enh_importance = f"{enhanced_sorted_importances[i]:.4f}" if i < len(enhanced_sorted_importances) else "-"
+    
+    print(f"{i+1:<5}{dt_feature:<20}{dt_importance:<13}{nn_feature:<20}{nn_importance:<13}{enh_feature:<20}{enh_importance:<10}")
+
 # ----------------------------------------------------- #
 
-# Reflection on domain-driven features
+# Summary reflection on features
 print("\n--- Summary Reflection ---")
 print("\n1. Did accuracy improve?")
 if enhanced_nnt_accuracy > nnt_accuracy:
@@ -401,4 +506,7 @@ else:
     print(f"   The new model was slower by {training_time_enhanced - training_time:.2f} seconds ({(training_time_enhanced - training_time) / training_time * 100:.2f}%)")
 
 print("\n3. Which feature seemed more predictive?")
-
+print("   Based on the feature importance analysis:")
+print(f"   - For Decision Tree: {sorted_feature_names[0]} (Importance: {sorted_importances[0]:.4f}) and {sorted_feature_names[1]} (Importance: {sorted_importances[1]:.4f})")
+print(f"   - For Neural Network: {nn_sorted_feature_names[0]} (Importance: {nn_sorted_importances[0]:.4f}) and {nn_sorted_feature_names[1]} (Importance: {nn_sorted_importances[1]:.4f})")
+print(f"   - For Enhanced Neural Network: {enhanced_sorted_feature_names[0]} (Importance: {enhanced_sorted_importances[0]:.4f}) and {enhanced_sorted_feature_names[1]} (Importance: {enhanced_sorted_importances[1]:.4f})\n")
