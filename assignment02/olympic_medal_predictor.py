@@ -29,16 +29,16 @@ if not os.path.exists('visualizations'):
     os.makedirs('visualizations')
 
 # Configure pandas to display float numbers with 4 decimal places
-#pd.set_option('display.float_format', '{:.4f}'.format)
+pd.set_option('display.float_format', '{:.4f}'.format)
 
 # Display the first few rows of the dataset
-#print(data.head())
+print(data.head())
 
 # Check for missing/null values
-#print(data.isnull().sum())
+print(data.isnull().sum())
 
 # Check Basic Descriptive statistics
-#print(data.describe())
+print(data.describe())
 
 # Drop unnecessary/redundant columns
 data = data.drop(columns=['Country-Code','Gender-Code'])
@@ -58,16 +58,16 @@ medal_colors = {
     'Bronze': '#CD7F32'   # Bronze
 }
 
-""" plt.figure(figsize=(10, 6))
+plt.figure(figsize=(10, 6))
 sns.countplot(x='Medal', data=data, palette=medal_colors, hue='Medal')
 plt.title('Distribution of Medal Types', fontsize=16)
 plt.xlabel('Medal Type', fontsize=14)
 plt.ylabel('Count', fontsize=14)
 plt.savefig('visualizations/01-medal_distribution.png')
-plt.close() """
+plt.close()
 
 # EDA Visualization 02 - Medal Count by Country (Top 15)
-""" plt.figure(figsize=(10, 6))
+plt.figure(figsize=(10, 6))
 country_medals = data['Country'].value_counts().head(15)
 sns.barplot(x=country_medals.index, y=country_medals.values, palette='viridis', hue=country_medals.index)
 plt.title('Top 15 Countries by Medal Count', fontsize=16)
@@ -76,10 +76,10 @@ plt.ylabel('Number of Medals', fontsize=14)
 plt.xticks(rotation=45, ha='right')
 plt.tight_layout()
 plt.savefig('visualizations/02-top_15_countries_medals.png')
-plt.close() """
+plt.close()
 
 # EDA Visualization 03 - Medal Count by Country (Top 10) breakdown by Medal Type
-""" plt.figure(figsize=(10, 6))
+plt.figure(figsize=(10, 6))
 medals_by_country = data.groupby(['Country', 'Medal']).size().unstack(fill_value=0)
 medals_by_country['Total'] = medals_by_country.sum(axis=1)
 top10_countries = medals_by_country.sort_values('Total', ascending=False).head(10)
@@ -92,10 +92,10 @@ plt.xticks(rotation=45, ha='right')
 plt.legend(title='Medal Type')
 plt.tight_layout()
 plt.savefig('visualizations/03-top_10_countries_breakdown_medals.png')
-plt.close() """
+plt.close()
 
 # EDA Visualization 04 - Medal Count by Sport and Gender
-""" plt.figure(figsize=(10, 6))
+plt.figure(figsize=(10, 6))
 medals_by_sport_gender = data.groupby(['Sport', 'Gender']).size().unstack(fill_value=0)
 medals_by_sport_gender.plot(kind='bar', stacked=True, figsize=(12, 6), color=['blue', 'magenta'])
 plt.title('Medal Count by Sport and Gender', fontsize=16)
@@ -105,10 +105,10 @@ plt.xticks(rotation=45, ha='right')
 plt.legend(title='Gender')
 plt.tight_layout()
 plt.savefig('visualizations/04-medal_count_sport_gender.png')
-plt.close() """
+plt.close()
 
 # EDA Visualization 05 - Medal Count by Year
-""" plt.figure(figsize=(10, 6))
+plt.figure(figsize=(10, 6))
 medals_by_year = data.groupby('Year').size()
 medals_by_year.plot(kind='line', marker='o')
 plt.title('Total Medal Count by Year', fontsize=16)
@@ -117,7 +117,7 @@ plt.ylabel('Number of Medals', fontsize=14)
 plt.grid(True)
 plt.tight_layout()
 plt.savefig('visualizations/05-medal_count_by_year.png')
-plt.close() """
+plt.close()
 
 # Create a copy of the dataframe for preprocessing
 data_features = data.drop(columns=['Medal'])  # Features
@@ -240,7 +240,7 @@ history = model.fit(
 training_time = time.time() - start_time
 
 # EDA Visualization 08 - Neural Network Training - Validation Accuracy & Loss
-""" plt.figure(figsize=(10, 6))
+plt.figure(figsize=(10, 6))
 # Plot accuracy
 plt.subplot(1, 2, 1)
 plt.plot(history.history['accuracy'], label='Training Accuracy')
@@ -259,7 +259,7 @@ plt.xlabel('Epoch', fontsize=14)
 plt.legend()
 plt.tight_layout()
 plt.savefig('visualizations/08-neural_network_training_history.png')
-plt.close() """
+plt.close()
 
 # Evaluate the model on the test set
 print("\nEvaluating neural network on test set...")
@@ -322,7 +322,7 @@ enhanced_history = enhanced_model.fit(
 training_time_enhanced = time.time() - start_time_enhanced
 
 # EDA Visualization 09 - Neural Network Training - Validation Accuracy & Loss Enhanced Set
-""" plt.figure(figsize=(10, 6))
+plt.figure(figsize=(10, 6))
 # Plot accuracy
 plt.subplot(1, 2, 1)
 plt.plot(enhanced_history.history['accuracy'], label='Training Accuracy')
@@ -341,7 +341,7 @@ plt.xlabel('Epoch', fontsize=14)
 plt.legend()
 plt.tight_layout()
 plt.savefig('visualizations/09-neural_network_enhanced_set_training_history.png')
-plt.close() """
+plt.close()
 
 # Evaluate the model on the test set
 print("\nEvaluating neural network on enhanced test set...")
